@@ -16,9 +16,6 @@
     <Filter Include="OpenCL Files">
       <UniqueIdentifier>{af1248aa-f1e5-4541-b3ce-7e7bc7e88b1e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Third Party Files">
-      <UniqueIdentifier>{ce212bbf-d726-44d6-9888-1cdd6abad0d6}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Program.cpp">
@@ -32,10 +29,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h">
-      <Filter>Third Party Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stb_image_write.h">
-      <Filter>Third Party Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

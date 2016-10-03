@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Third Party Files">
-      <UniqueIdentifier>{d76cbcfe-c58e-4264-ab7d-56d7313e7fe2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Program.cpp">
@@ -24,10 +21,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h">
-      <Filter>Third Party Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stb_image_write.h">
-      <Filter>Third Party Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
