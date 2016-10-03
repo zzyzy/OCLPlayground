@@ -116,20 +116,76 @@ int main()
 	}
 	std::cout << "Kernels created" << std::endl;
 
-	// Prepare data
+	cl::Kernel luminanceKernel = kernels[0];
+	cl::Kernel reductionStepKernel = kernels[1];
+	cl::Kernel reductionCompleteKernel = kernels[2];
 
+	// Prepare data
+	int w, h, n;
+	unsigned char* inputImage = stbi_load(INPUT_IMAGE_FILENAME.c_str(), &w, &h, &n, 4);
+	float* luminance = new float[w * h];
+	float sum = 0.0f;
+	size_t localSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+	size_t globalSize = (w * h) / 4;
+	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 
 	// Create buffers
+	cl::Image2D inputImageBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imageFormat, w, h, 0, inputImage, &err);
+	if (err != CL_SUCCESS)
+	{
+		std::cerr << "Error " << err << ": Unable to create image2d object for input" << std::endl;
+		return err;
+	}
 
+	cl::Buffer luminanceBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(float) * w * h, luminance, &err);
+	if (err != CL_SUCCESS)
+	{
+		std::cerr << "Error " << err << ": Unable to create luminance" << std::endl;
+		return err;
+	}
+
+	cl::Buffer sumBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float), nullptr, &err);
+	if (err != CL_SUCCESS)
+	{
+		std::cerr << "Error " << err << ": Unable to create sum buffer" << std::endl;
+		return err;
+	}
 
 	// Set kernel arguments
+	luminanceKernel.setArg(0, inputImageBuffer);
+	luminanceKernel.setArg(1, luminanceBuffer);
 
+	reductionStepKernel.setArg(0, luminanceBuffer);
+	reductionStepKernel.setArg(1, sizeof(float) * 4 * localSize, nullptr);
+
+	reductionCompleteKernel.setArg(0, luminanceBuffer);
+	reductionCompleteKernel.setArg(1, sizeof(float) * 4 * localSize, nullptr);
+	reductionCompleteKernel.setArg(2, sumBuffer);
 
 	// Execute kernels
+	// Luminance kernel
+	queue.enqueueNDRangeKernel(luminanceKernel, cl::NullRange, cl::NDRange(w, h));
 
+	queue.enqueueReadBuffer(luminanceBuffer, CL_TRUE, 0, sizeof(float) * w * h, luminance);
+	stbi_image_free(inputImage);
+
+	// Reduction kernels
+	queue.enqueueNDRangeKernel(reductionStepKernel, cl::NullRange, cl::NDRange(globalSize), cl::NDRange(localSize));
+	while (globalSize / localSize > localSize)
+	{
+		globalSize = globalSize / localSize;
+		queue.enqueueNDRangeKernel(reductionStepKernel, cl::NullRange, cl::NDRange(globalSize), cl::NDRange(localSize));
+	}
+	globalSize = globalSize / localSize;
+	queue.enqueueNDRangeKernel(reductionCompleteKernel, cl::NullRange, cl::NDRange(globalSize));
 
 	// Fetch result from kernels
+	queue.enqueueReadBuffer(sumBuffer, CL_TRUE, 0, sizeof(float), &sum);
 
+	std::cout << "Sum: " << sum << std::endl;
+	std::cout << "Avg: " << sum / (w * h) << std::endl;
+
+	delete[] luminance;
 
 	return 0;
 }
