@@ -21,6 +21,9 @@
     <ClCompile Include="Program.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OCLUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h">
@@ -32,12 +35,18 @@
     <ClInclude Include="Filters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OCLUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Convolution.cl">
       <Filter>OpenCL Files</Filter>
     </None>
     <None Include="Reduction.cl">
+      <Filter>OpenCL Files</Filter>
+    </None>
+    <None Include="Bloom.cl">
       <Filter>OpenCL Files</Filter>
     </None>
   </ItemGroup>
