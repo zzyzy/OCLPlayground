@@ -1,7 +1,7 @@
 __kernel
 void luminance(__read_only image2d_t inputImage,
-	__read_only sampler_t sampler,
-	__global float* outputLuminance)
+               __read_only sampler_t sampler,
+               __global float* outputLuminance)
 {
 	int2 coord = (int2)(get_global_id(0), get_global_id(1));
 	float4 pixel = read_imagef(inputImage, sampler, coord);
@@ -11,7 +11,7 @@ void luminance(__read_only image2d_t inputImage,
 
 __kernel
 void reductionStep(__global float4* data,
-	__local float4* partialSums)
+                   __local float4* partialSums)
 {
 	int lid = get_local_id(0);
 	int groupSize = get_local_size(0);
@@ -36,8 +36,8 @@ void reductionStep(__global float4* data,
 
 __kernel
 void reductionComplete(__global float4* data,
-	__local float4* partialSums,
-	__global float* sum)
+                       __local float4* partialSums,
+                       __global float* sum)
 {
 	int lid = get_local_id(0);
 	int groupSize = get_local_size(0);
