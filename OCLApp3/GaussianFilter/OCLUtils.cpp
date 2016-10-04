@@ -65,11 +65,11 @@ cl::Context MakeContext(const cl::Device& device)
 	return context;
 }
 
-cl::CommandQueue MakeCommandQueue(const cl::Context& context, const cl::Device& device)
+cl::CommandQueue MakeCommandQueue(const cl::Context& context, const cl::Device& device, cl_command_queue_properties properties)
 {
 	cl_int err;
 
-	cl::CommandQueue queue(context, device, 0, &err);
+	cl::CommandQueue queue(context, device, properties, &err);
 	CheckErrorCode(err, "Unable to create command queue");
 
 	return queue;

@@ -35,7 +35,7 @@ int main()
 	// ==============================================================
 	cl::Device device = GetDevice(SELECTED_VENDOR);
 	cl::Context context = MakeContext(device);
-	cl::CommandQueue queue = MakeCommandQueue(context, device);
+	cl::CommandQueue queue = MakeCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 
 	std::vector<const char*> sourceFileNames;
 	sourceFileNames.push_back(CL_FILENAME);
@@ -73,9 +73,11 @@ int main()
 	region[2] = 1;
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 	cl::Sampler sampler = MakeSampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST);
-	cl::Image2D inputImageBuffer = MakeImage2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-	                                           imageFormat, w, h, 0, inputImage);
-	cl::Image2D outputImageBuffer = MakeImage2D(context, CL_MEM_WRITE_ONLY, imageFormat, w, h, 0);
+
+	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE,
+	                                       imageFormat, w, h, 0);
+	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE,
+	                                       imageFormat, w, h, 0);
 
 	// ==============================================================
 	//
@@ -99,8 +101,11 @@ int main()
 	cl::Buffer filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 	                                     sizeof(float) * filterSize * filterSize, filter);
 
-	err = kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(0, inputImageBuffer);
-	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(1, outputImageBuffer);
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
+
+	err = kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
+	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
 	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(2, sampler);
 	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
 	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(4, filterSize);
@@ -109,7 +114,7 @@ int main()
 	err = queue.enqueueNDRangeKernel(kernels[SIMPLE_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue simple convolution kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
 	stbi_write_bmp("Output/simpleBlurImage.bmp", w, h, 4, outputImage);
@@ -123,8 +128,11 @@ int main()
 	filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 	                          sizeof(float) * filterSize, filter);
 
-	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, inputImageBuffer);
-	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, outputImageBuffer);
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
+
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(2, sampler);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSize);
@@ -134,24 +142,112 @@ int main()
 	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read discarded pixels output image");
 
 	stbi_write_bmp("Output/onePassBlurredImage.bmp", w, h, 4, outputImage);
 
-	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferB);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferA);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
 	CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
-
-	err = queue.enqueueWriteImage(inputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
-	CheckErrorCode(err, "Unable to write input image buffer");
 
 	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferA, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
 	stbi_write_bmp("Output/twoPassBlurredImage.bmp", w, h, 4, outputImage);
+
+	// ==============================================================
+	//
+	// Perform profiling
+	//
+	// ==============================================================
+	cl::Event startEvent, finishEvent;
+	int filterSizes[3] = {3, 5, 7};
+	std::ofstream outfile;
+
+	outfile.open("Output/Profiling.txt");
+
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
+
+	for (auto i = 0; i < 3; ++i)
+	{
+		outfile << "OnePass" << filterSizes[i] << "x" << filterSizes[i] << std::endl;
+
+		for (auto u = 0; u < 1000; ++u)
+		{
+			filter = const_cast<float*>(filters[filterSizes[i] * filterSizes[i]]);
+			filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			                          sizeof(float) * filterSizes[i] * filterSizes[i], filter);
+
+			err = kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
+			err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(4, filterSizes[i]);
+			CheckErrorCode(err, "Unable to set simple convolution kernel arguments");
+
+			err = queue.enqueueNDRangeKernel(kernels[SIMPLE_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h),
+			                                 cl::NullRange, nullptr, &finishEvent);
+			CheckErrorCode(err, "Unable to enqueue simple convolution kernel");
+
+			err = queue.finish();
+			CheckErrorCode(err, "Unable to finish queue");
+			auto start = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+			auto end = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>();
+			auto totalTime = end - start;
+			outfile << totalTime / 1000000.0f << std::endl;
+		}
+
+		outfile << std::endl;
+	}
+
+	for (auto i = 0; i < 3; ++i)
+	{
+		outfile << "TwoPass" << filterSizes[i] << "x" << filterSizes[i] << std::endl;
+
+		for (auto u = 0; u < 1000; ++u)
+		{
+			filter = const_cast<float*>(filters[filterSizes[i]]);
+			filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			                          sizeof(float) * filterSizes[i], filter);
+
+			err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+			CheckErrorCode(err, "Unable to write image buffer A");
+
+			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
+			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSize);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 1);
+			CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
+
+			err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h),
+			                                 cl::NullRange, nullptr, &startEvent);
+			CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
+
+			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferB);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferA);
+			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
+			CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
+
+			err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h),
+			                                 cl::NullRange, nullptr, &finishEvent);
+			CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
+
+			err = queue.finish();
+			CheckErrorCode(err, "Unable to finish queue");
+			auto start = startEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+			auto end = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>();
+			auto totalTime = end - start;
+			outfile << totalTime / 1000000.0f << std::endl;
+		}
+
+		outfile << std::endl;
+	}
+
+	outfile.close();
 
 	delete[] outputImage;
 	stbi_image_free(inputImage);

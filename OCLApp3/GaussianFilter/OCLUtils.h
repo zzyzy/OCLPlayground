@@ -15,7 +15,8 @@ cl::Context
 MakeContext(const cl::Device& device);
 
 cl::CommandQueue
-MakeCommandQueue(const cl::Context& context, const cl::Device& device);
+MakeCommandQueue(const cl::Context& context, const cl::Device& device,
+                 cl_command_queue_properties properties = 0);
 
 cl::Program
 MakeAndBuildProgram(const std::vector<const char*>& sourceFileNames,
