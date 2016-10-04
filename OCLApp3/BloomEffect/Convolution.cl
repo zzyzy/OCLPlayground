@@ -1,10 +1,9 @@
 __kernel
 void simpleConvolution(__read_only image2d_t inputImage,
-                       __write_only image2d_t outputImage,
-					   __read_only sampler_t sampler,
-                       __constant float* filter,
-                       __private int fx,
-                       __private int fy)
+	__write_only image2d_t outputImage,
+	__read_only sampler_t sampler,
+	__constant float* filter,
+	__private int filterSize)
 {
 	// Get work-item’s row and column position
 	int column = get_global_id(0);
@@ -19,16 +18,15 @@ void simpleConvolution(__read_only image2d_t inputImage,
 	int2 coord;
 	float4 pixel;
 
-	const int hfx = fx / 2;
-	const int hfy = fy / 2;
+	const int halfFilterSize = filterSize / 2;
 
 	// Iterate over the rows
-	for (int i = -(hfx); i <= hfx; i++)
+	for (int i = -(halfFilterSize); i <= halfFilterSize; i++)
 	{
 		coord.y = row + i;
 
 		// Iterate over the columns
-		for (int j = -(hfy); j <= hfy; j++)
+		for (int j = -(halfFilterSize); j <= halfFilterSize; j++)
 		{
 			coord.x = column + j;
 
@@ -48,11 +46,11 @@ void simpleConvolution(__read_only image2d_t inputImage,
 
 __kernel
 void onePassConvolution(__read_only image2d_t inputImage,
-                        __write_only image2d_t outputImage,
-						__read_only sampler_t sampler,
-                        __constant float* filter,
-                        __private int filterSize,
-                        __private int horizontalPass)
+	__write_only image2d_t outputImage,
+	__read_only sampler_t sampler,
+	__constant float* filter,
+	__private int filterSize,
+	__private int horizontalPass)
 {
 	// Get work-item’s row and column position
 	int column = get_global_id(0);
