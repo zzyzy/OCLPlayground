@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <unordered_map>
 
 #include <CL/cl.hpp>
 
@@ -9,157 +9,149 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#include "OCLUtils.h"
 #include "Filters.h"
-#include "KernelFunctions.h"
 
-const std::string CL_FILENAME = "Convolution.cl";
-const std::string INPUT_IMAGE_FILENAME = "Input/bunnycity1.bmp";
-const std::string OUTPUT_IMAGE_FILENAME = "Output/bunnycity1.bmp";
-const std::string VENDOR_INTEL = "Intel";
-const std::string VENDOR_AMD = "Advanced Micro Devices";
-const std::string VENDOR_NVIDIA = "NVIDIA";
-const std::string SELECTED_VENDOR = VENDOR_NVIDIA;
+#define CL_FILENAME "Convolution.cl"
+
+#define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
+
+#define SIMPLE_CONVOLUTION_KERNEL "simpleConvolution"
+#define ONE_PASS_CONVOLUTION_KERNEL "onePassConvolution"
+
+#define VENDOR_INTEL "Intel"
+#define VENDOR_AMD "Advanced Micro Devices"
+#define VENDOR_NVIDIA "NVIDIA"
+#define SELECTED_VENDOR VENDOR_NVIDIA
 
 int main()
 {
-	std::vector<cl::Platform> platforms;
-	std::vector<cl::Device> devices;
-	cl::Platform platform;
-	cl::Device device;
 	cl_int err;
 
-	// Get platforms
-	err = cl::Platform::get(&platforms);
-	if (err != CL_SUCCESS)
+	// ==============================================================
+	//
+	// Setup OCL Context
+	//
+	// ==============================================================
+	cl::Device device = GetDevice(SELECTED_VENDOR);
+	cl::Context context = MakeContext(device);
+	cl::CommandQueue queue = MakeCommandQueue(context, device);
+
+	std::vector<const char*> sourceFileNames;
+	sourceFileNames.push_back(CL_FILENAME);
+	cl::Program program = MakeAndBuildProgram(sourceFileNames, context, device);
+
+	std::unordered_map<std::string, cl::Kernel> kernels = MakeKernels(program);
+
+	// ==============================================================
+	//
+	// Handle user input
+	//
+	// ==============================================================
+	int filterSize = 7;
+	std::cout << "Gaussian filter window size? (3/5/7)" << std::endl;
+	std::cin >> filterSize;
+	while (filterSize != 3 && filterSize != 5 && filterSize != 7)
 	{
-		std::cerr << "Error " << err << ": Unable to get OpenCL platforms" << std::endl;
-		return err;
+		std::cout << "Invalid input. Try again." << std::endl;
+		std::cout << "Gaussian filter window size? (3/5/7)" << std::endl;
+		std::cin >> filterSize;
 	}
 
-	for (auto p : platforms)
-	{
-		if (p.getInfo<CL_PLATFORM_VENDOR>().find(SELECTED_VENDOR) != std::string::npos)
-		{
-			platform = p;
-			break;
-		}
-	}
-	std::cout << "Selected platform: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-
-	// Get GPU devices
-	err = platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to get devices" << std::endl;
-		return err;
-	}
-
-	device = devices[0];
-	std::cout << "Selected device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-
-	// Create context
-	cl::Context context(device, nullptr, nullptr, nullptr, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create context" << std::endl;
-		return err;
-	}
-	std::cout << "Context created" << std::endl;
-
-	// Create command queue
-	cl::CommandQueue queue(context, device, 0, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create command queue" << std::endl;
-		return err;
-	}
-	std::cout << "Command queue created" << std::endl;
-
-	// Read .cl source file
-	std::ifstream infile;
-	std::stringstream stream;
-	std::string buffer;
-	cl::Program::Sources sources;
-
-	infile.open(CL_FILENAME);
-	if (infile.is_open() && infile.good())
-	{
-		stream << infile.rdbuf();
-	}
-	infile.close();
-
-	buffer = stream.str();
-	sources.push_back(std::make_pair(buffer.c_str(), buffer.length()));
-
-	// Create program object
-	cl::Program program(context, sources, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create program object" << std::endl;
-		return err;
-	}
-
-	// Build program
-	err = program.build();
-	std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to build program" << std::endl;
-		return err;
-	}
-	std::cout << "Build successful" << std::endl;
-
-	// Create kernels
-	std::vector<cl::Kernel> kernels;
-	err = program.createKernels(&kernels);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create kernels" << std::endl;
-		return err;
-	}
-	std::cout << "Kernels created" << std::endl;
-
-	cl::Kernel convolutionKernel = kernels[0];
-
-	// Prepare data
+	// ==============================================================
+	//
+	// Create buffers for image data
+	//
+	// ==============================================================
 	int w, h, n;
-	unsigned char* inputImage = stbi_load(INPUT_IMAGE_FILENAME.c_str(), &w, &h, &n, 4);
-	unsigned char* outputImage;
+	unsigned char* inputImage = stbi_load(INPUT_IMAGE_FILENAME, &w, &h, &n, 4);
+	unsigned char* outputImage = new unsigned char[w * h * 4];
+	cl::size_t<3> origin;
+	cl::size_t<3> region;
+	region[0] = w;
+	region[1] = h;
+	region[2] = 1;
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
-	int fx = 3, fy = 3;
-	float* selectedFilter = const_cast<float*>(GaussianFilter3x3);
+	cl::Sampler sampler = MakeSampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST);
+	cl::Image2D inputImageBuffer = MakeImage2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+	                                           imageFormat, w, h, 0, inputImage);
+	cl::Image2D outputImageBuffer = MakeImage2D(context, CL_MEM_WRITE_ONLY, imageFormat, w, h, 0);
 
-	// Create buffers
-	cl::Image2D inputImageBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imageFormat, w, h, 0, inputImage, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create image2d object for input image" << std::endl;
-		return err;
-	}
+	// ==============================================================
+	//
+	// Create buffer for filter data
+	//
+	// ==============================================================
+	std::unordered_map<int, const float*> filters;
+	filters.insert(std::make_pair(3, GaussianFilter3));
+	filters.insert(std::make_pair(5, GaussianFilter5));
+	filters.insert(std::make_pair(7, GaussianFilter7));
+	filters.insert(std::make_pair(9, GaussianFilter3x3));
+	filters.insert(std::make_pair(25, GaussianFilter5x5));
+	filters.insert(std::make_pair(49, GaussianFilter7x7));
 
-	cl::Image2D outputImageBuffer(context, CL_MEM_WRITE_ONLY, imageFormat, w, h, 0, nullptr, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create image2d object for output image" << std::endl;
-		return err;
-	}
+	// ==============================================================
+	//
+	// Simple gaussian blur
+	//
+	// ==============================================================
+	float* filter = const_cast<float*>(filters[filterSize * filterSize]);
+	cl::Buffer filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+	                                     sizeof(float) * filterSize * filterSize, filter);
 
-	cl::Buffer filterBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * fx * fy,
-	                        selectedFilter, &err);
-	if (err != CL_SUCCESS)
-	{
-		std::cerr << "Error " << err << ": Unable to create filter buffer" << std::endl;
-		return err;
-	}
+	err = kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(0, inputImageBuffer);
+	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(1, outputImageBuffer);
+	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(2, sampler);
+	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
+	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(4, filterSize);
+	CheckErrorCode(err, "Unable to set simple convolution kernel arguments");
 
-	// Set kernel arguments
+	err = queue.enqueueNDRangeKernel(kernels[SIMPLE_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
+	CheckErrorCode(err, "Unable to enqueue simple convolution kernel");
 
+	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	CheckErrorCode(err, "Unable to read output image buffer");
 
-	// Execute kernels
-	outputImage = simpleConvolution(convolutionKernel, queue, inputImageBuffer, outputImageBuffer, filterBuffer, fx, fy);
+	stbi_write_bmp("Output/simpleBlurImage.bmp", w, h, 4, outputImage);
 
-	// Fetch result from kernels
-	stbi_write_bmp(OUTPUT_IMAGE_FILENAME.c_str(), w, h, 4, outputImage);
+	// ==============================================================
+	//
+	// Two pass gaussian blur
+	//
+	// ==============================================================
+	filter = const_cast<float*>(filters[filterSize]);
+	filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+	                          sizeof(float) * filterSize, filter);
+
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, inputImageBuffer);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, outputImageBuffer);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(2, sampler);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSize);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 1);
+	CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
+
+	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
+	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
+
+	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	CheckErrorCode(err, "Unable to read discarded pixels output image");
+
+	stbi_write_bmp("Output/onePassBlurredImage.bmp", w, h, 4, outputImage);
+
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
+	CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
+
+	err = queue.enqueueWriteImage(inputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	CheckErrorCode(err, "Unable to write input image buffer");
+
+	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
+	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
+
+	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	CheckErrorCode(err, "Unable to read output image buffer");
+
+	stbi_write_bmp("Output/twoPassBlurredImage.bmp", w, h, 4, outputImage);
 
 	delete[] outputImage;
 	stbi_image_free(inputImage);

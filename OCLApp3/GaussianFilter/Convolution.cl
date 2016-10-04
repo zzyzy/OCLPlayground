@@ -1,68 +1,65 @@
-__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE |
-							   CLK_ADDRESS_CLAMP_TO_EDGE |
-							   CLK_FILTER_NEAREST;
-
 __kernel
 void simpleConvolution(__read_only image2d_t inputImage,
-                       __write_only image2d_t outputImage,
-                       __constant float* filter,
-                       __private int fx,
-                       __private int fy)
+	__write_only image2d_t outputImage,
+	__read_only sampler_t sampler,
+	__constant float* filter,
+	__private int filterSize)
 {
-	/* Get work-item’s row and column position */
+	// Get work-item’s row and column position
 	int column = get_global_id(0);
 	int row = get_global_id(1);
 
-	/* Accumulated pixel value */
+	// Accumulated pixel value
 	float4 sum = (float4)(0.0);
 
-	/* Filter's current index */
+	// Filter's current index
 	int filterIndex = 0;
 
 	int2 coord;
 	float4 pixel;
 
-	const int hfx = fx / 2;
-	const int hfy = fy / 2;
+	const int halfFilterSize = filterSize / 2;
 
-	/* Iterate over the rows */
-	for (int i = -(hfx); i <= hfx; i++)
+	// Iterate over the rows
+	for (int i = -(halfFilterSize); i <= halfFilterSize; i++)
 	{
 		coord.y = row + i;
 
-		/* Iterate over the columns */
-		for (int j = -(hfy); j <= hfy; j++)
+		// Iterate over the columns
+		for (int j = -(halfFilterSize); j <= halfFilterSize; j++)
 		{
 			coord.x = column + j;
 
-			/* Read value pixel from the image */
+			// Read value pixel from the image
 			pixel = read_imagef(inputImage, sampler, coord);
-			/* Acculumate weighted sum */
+
+			// Acculumate weighted sum
 			sum.xyz += pixel.xyz * filter[filterIndex++];
 			sum.w = 1.0f;
 		}
 	}
 
-	/* Write new pixel value to output */
+	// Write new pixel value to output
 	coord = (int2)(column, row);
 	write_imagef(outputImage, coord, sum);
 }
 
 __kernel
 void onePassConvolution(__read_only image2d_t inputImage,
-                        __write_only image2d_t outputImage,
-                        __constant float* filter,
-                        __private int filterSize,
-                        __private int horizontalPass)
+	__write_only image2d_t outputImage,
+	__read_only sampler_t sampler,
+	__constant float* filter,
+	__private int filterSize,
+	__private int horizontalPass)
 {
-	/* Get work-item’s row and column position */
+	// Get work-item’s row and column position
 	int column = get_global_id(0);
 	int row = get_global_id(1);
 
-	/* Accumulated pixel value */
+	// Accumulated pixel value
 	float4 sum = (float4)(0.0);
 
-	/* Filter's current index */
+	// Filter's current index
 	int filterIndex = 0;
 
 	int2 coord = (int2)(column, row);
@@ -70,7 +67,7 @@ void onePassConvolution(__read_only image2d_t inputImage,
 
 	const int halfFilterSize = filterSize / 2;
 
-	/* Iterate over the rows */
+	// Iterate over the filter
 	for (int i = -(halfFilterSize); i <= halfFilterSize; i++)
 	{
 		if (horizontalPass)
@@ -82,14 +79,15 @@ void onePassConvolution(__read_only image2d_t inputImage,
 			coord.y = row + i;
 		}
 
-		/* Read value pixel from the image */
+		// Read value pixel from the image
 		pixel = read_imagef(inputImage, sampler, coord);
-		/* Acculumate weighted sum */
+
+		// Acculumate weighted sum
 		sum.xyz += pixel.xyz * filter[filterIndex++];
 		sum.w = 1.0f;
 	}
 
-	/* Write new pixel value to output */
+	// Write new pixel value to output
 	coord = (int2)(column, row);
 	write_imagef(outputImage, coord, sum);
 }

@@ -27,7 +27,7 @@
     <ClInclude Include="Filters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="KernelFunctions.h">
+    <ClInclude Include="OCLUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,7 +35,7 @@
     <ClCompile Include="Program.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="KernelFunctions.cpp">
+    <ClCompile Include="OCLUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
