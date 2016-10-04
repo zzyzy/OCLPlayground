@@ -169,14 +169,14 @@ int main()
 	int filterSizes[3] = {3, 5, 7};
 	std::ofstream outfile;
 
-	outfile.open("Output/Profiling.txt");
-
 	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
 	CheckErrorCode(err, "Unable to write image buffer A");
 
 	for (auto i = 0; i < 3; ++i)
 	{
-		outfile << "OnePass" << filterSizes[i] << "x" << filterSizes[i] << std::endl;
+		std::string name = "Simple" + std::to_string(filterSizes[i]) + "x" + std::to_string(filterSizes[i]);
+		outfile.open("Profiling/" + name + ".txt");
+		outfile << name << std::endl;
 
 		for (auto u = 0; u < 1000; ++u)
 		{
@@ -200,12 +200,14 @@ int main()
 			outfile << totalTime / 1000000.0f << std::endl;
 		}
 
-		outfile << std::endl;
+		outfile.close();
 	}
 
 	for (auto i = 0; i < 3; ++i)
 	{
-		outfile << "TwoPass" << filterSizes[i] << "x" << filterSizes[i] << std::endl;
+		std::string name = "TwoPass" + std::to_string(filterSizes[i]) + "x" + std::to_string(filterSizes[i]);
+		outfile.open("Profiling/" + name + ".txt");
+		outfile << name << std::endl;
 
 		for (auto u = 0; u < 1000; ++u)
 		{
@@ -218,8 +220,8 @@ int main()
 
 			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
 			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
-			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
-			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSize);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSizes[i]);
 			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 1);
 			CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
 
@@ -229,7 +231,7 @@ int main()
 
 			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferB);
 			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferA);
-			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
+			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
 			CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
 
 			err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h),
@@ -244,10 +246,8 @@ int main()
 			outfile << totalTime / 1000000.0f << std::endl;
 		}
 
-		outfile << std::endl;
+		outfile.close();
 	}
-
-	outfile.close();
 
 	delete[] outputImage;
 	stbi_image_free(inputImage);
