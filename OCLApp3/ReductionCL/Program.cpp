@@ -129,6 +129,13 @@ int main()
 	size_t globalSize = (w * h) / 4;
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 
+	cl::Sampler sampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST, &err);
+	if (err != CL_SUCCESS)
+	{
+		std::cerr << "Error " << err << ": Unable to create sampler" << std::endl;
+		return err;
+	}
+
 	// Create buffers
 	cl::Image2D inputImageBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, imageFormat, w, h, 0, inputImage, &err);
 	if (err != CL_SUCCESS)
@@ -153,7 +160,8 @@ int main()
 
 	// Set kernel arguments
 	luminanceKernel.setArg(0, inputImageBuffer);
-	luminanceKernel.setArg(1, luminanceBuffer);
+	luminanceKernel.setArg(1, sampler);
+	luminanceKernel.setArg(2, luminanceBuffer);
 
 	reductionStepKernel.setArg(0, luminanceBuffer);
 	reductionStepKernel.setArg(1, sizeof(float) * 4 * localSize, nullptr);
