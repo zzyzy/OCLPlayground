@@ -177,6 +177,7 @@ int main()
 		std::string name = "Simple" + std::to_string(filterSizes[i]) + "x" + std::to_string(filterSizes[i]);
 		outfile.open("Profiling/" + name + ".txt");
 		outfile << name << std::endl;
+		cl_ulong totalTime = 0;
 
 		for (auto u = 0; u < 1000; ++u)
 		{
@@ -196,10 +197,11 @@ int main()
 			CheckErrorCode(err, "Unable to finish queue");
 			auto start = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>();
 			auto end = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>();
-			auto totalTime = end - start;
-			outfile << totalTime / 1000000.0f << std::endl;
+			totalTime += end - start;
+			outfile << (end - start) / 1000000.0f << std::endl;
 		}
 
+		std::cout << "Average time for " << name << ": " << totalTime / 1000000.0f / 1000.0f << std::endl;
 		outfile.close();
 	}
 
@@ -208,6 +210,7 @@ int main()
 		std::string name = "TwoPass" + std::to_string(filterSizes[i]) + "x" + std::to_string(filterSizes[i]);
 		outfile.open("Profiling/" + name + ".txt");
 		outfile << name << std::endl;
+		cl_ulong totalTime = 0;
 
 		for (auto u = 0; u < 1000; ++u)
 		{
@@ -242,10 +245,11 @@ int main()
 			CheckErrorCode(err, "Unable to finish queue");
 			auto start = startEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>();
 			auto end = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>();
-			auto totalTime = end - start;
-			outfile << totalTime / 1000000.0f << std::endl;
+			totalTime += end - start;
+			outfile << (end - start) / 1000000.0f << std::endl;
 		}
 
+		std::cout << "Average time for " << name << ": " << totalTime / 1000000.0f / 1000.0f << std::endl;
 		outfile.close();
 	}
 
