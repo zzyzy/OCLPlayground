@@ -6,13 +6,13 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-const std::string INPUT_IMAGE_FILENAME = "Input/bunnycity1.bmp";
-const std::string OUTPUT_IMAGE_FILENAME = "Output/bunnycity1.bmp";
+#define INPUT_IMAGE_FILENAME "Input/bunnycity1.bmp"
+#define OUTPUT_IMAGE_FILENAME "Output/bunnycity1.bmp"
 
 int main()
 {
 	int x, y, n;
-	unsigned char* data = stbi_load(INPUT_IMAGE_FILENAME.c_str(), &x, &y, &n, 4);
+	unsigned char* data = stbi_load(INPUT_IMAGE_FILENAME, &x, &y, &n, 4);
 	float luminanceSum = 0.0f;
 	float luminanceAvg = 0.0f;
 
@@ -38,7 +38,7 @@ int main()
 	}
 
 	// Writes a grayscale image
-	stbi_write_bmp(OUTPUT_IMAGE_FILENAME.c_str(), x, y, 4, data);
+	stbi_write_bmp(OUTPUT_IMAGE_FILENAME, x, y, 4, data);
 
     stbi_image_free(data);
 	return 0;
