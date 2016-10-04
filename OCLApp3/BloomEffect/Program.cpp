@@ -116,10 +116,16 @@ int main()
 	region[2] = 1;
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 	cl::Sampler sampler = MakeSampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST);
-	cl::Image2D inputImageBufferA = MakeImage2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-	                                            imageFormat, w, h, 0, inputImage);
-	cl::Image2D inputImageBufferB = MakeImage2D(context, CL_MEM_READ_ONLY, imageFormat, w, h);
-	cl::Image2D outputImageBuffer = MakeImage2D(context, CL_MEM_WRITE_ONLY, imageFormat, w, h);
+
+	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE,
+	                                       imageFormat, w, h, 0);
+	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE,
+	                                       imageFormat, w, h, 0);
+	cl::Image2D imageBufferC = MakeImage2D(context, CL_MEM_READ_WRITE,
+	                                       imageFormat, w, h, 0);
+
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
 
 	// ==============================================================
 	//
@@ -149,7 +155,7 @@ int main()
 		size_t localSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 		size_t globalSize = (w * h) / 4;
 
-		err = kernels[LUMINANCE_KERNEL].setArg(0, inputImageBufferA);
+		err = kernels[LUMINANCE_KERNEL].setArg(0, imageBufferA);
 		err |= kernels[LUMINANCE_KERNEL].setArg(1, sampler);
 		err |= kernels[LUMINANCE_KERNEL].setArg(2, luminanceBuffer);
 		CheckErrorCode(err, "Unable to set luminance kernel arguments");
@@ -197,8 +203,8 @@ int main()
 	// Discard pixels
 	//
 	// ==============================================================
-	err = kernels[DISCARD_PIXELS_KERNEL].setArg(0, inputImageBufferA);
-	err |= kernels[DISCARD_PIXELS_KERNEL].setArg(1, outputImageBuffer);
+	err = kernels[DISCARD_PIXELS_KERNEL].setArg(0, imageBufferA);
+	err |= kernels[DISCARD_PIXELS_KERNEL].setArg(1, imageBufferB);
 	err |= kernels[DISCARD_PIXELS_KERNEL].setArg(2, sampler);
 	err |= kernels[DISCARD_PIXELS_KERNEL].setArg(3, luminanceAverage);
 	CheckErrorCode(err, "Unable to set discard pixels kernel arguments");
@@ -206,7 +212,7 @@ int main()
 	err = queue.enqueueNDRangeKernel(kernels[DISCARD_PIXELS_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue discard pixels kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read discarded pixels output image");
 
 	stbi_write_bmp("Output/discardedPixelsImage.bmp", w, h, 4, outputImage);
@@ -216,35 +222,31 @@ int main()
 	// Two pass gaussian blur
 	//
 	// ==============================================================
-	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, inputImageBufferA);
-	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, outputImageBuffer);
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferB);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferA);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(2, sampler);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(4, filterSize);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 1);
 	CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
 
-	err = queue.enqueueWriteImage(inputImageBufferA, CL_TRUE, origin, region, 0, 0, outputImage);
-	CheckErrorCode(err, "Unable to write discarded pixels output image");
-
 	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferA, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read discarded pixels output image");
 
 	stbi_write_bmp("Output/onePassBlurredImage.bmp", w, h, 4, outputImage);
 
-	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
+	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
+	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(5, 0);
 	CheckErrorCode(err, "Unable to set one pass convolution kernel arguments");
-
-	err = queue.enqueueWriteImage(inputImageBufferA, CL_TRUE, origin, region, 0, 0, outputImage);
-	CheckErrorCode(err, "Unable to write input image buffer");
 
 	err = queue.enqueueNDRangeKernel(kernels[ONE_PASS_CONVOLUTION_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue one pass convolution kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
 	stbi_write_bmp("Output/twoPassBlurredImage.bmp", w, h, 4, outputImage);
@@ -254,22 +256,19 @@ int main()
 	// Merge original input image with two pass blurred image
 	//
 	// ==============================================================
-	err = kernels[MERGE_IMAGES_KERNEL].setArg(0, inputImageBufferA);
-	err |= kernels[MERGE_IMAGES_KERNEL].setArg(1, inputImageBufferB);
-	err |= kernels[MERGE_IMAGES_KERNEL].setArg(2, outputImageBuffer);
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
+
+	err = kernels[MERGE_IMAGES_KERNEL].setArg(0, imageBufferA);
+	err |= kernels[MERGE_IMAGES_KERNEL].setArg(1, imageBufferB);
+	err |= kernels[MERGE_IMAGES_KERNEL].setArg(2, imageBufferC);
 	err |= kernels[MERGE_IMAGES_KERNEL].setArg(3, sampler);
 	CheckErrorCode(err, "Unable to set merge images kernel arguments");
-
-	err = queue.enqueueWriteImage(inputImageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-	CheckErrorCode(err, "Unable to write input image buffer");
-
-	err = queue.enqueueWriteImage(inputImageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
-	CheckErrorCode(err, "Unable to write input image buffer");
 
 	err = queue.enqueueNDRangeKernel(kernels[MERGE_IMAGES_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unable to enqueue merge images kernel");
 
-	err = queue.enqueueReadImage(outputImageBuffer, CL_TRUE, origin, region, 0, 0, outputImage);
+	err = queue.enqueueReadImage(imageBufferC, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
 	stbi_write_bmp("Output/bloomImage.bmp", w, h, 4, outputImage);
