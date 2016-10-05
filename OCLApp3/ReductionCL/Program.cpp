@@ -11,7 +11,7 @@
 
 #define CL_FILENAME "Reduction.cl"
 
-#define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
+#define INPUT_IMAGE_FILENAME "Input/bunnycity1.bmp"
 
 #define LUMINANCE_KERNEL "Luminance"
 #define REDUCTION_STEP_KERNEL "ReductionStep"

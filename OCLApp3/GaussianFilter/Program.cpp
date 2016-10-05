@@ -14,7 +14,7 @@
 
 #define CL_FILENAME "Convolution.cl"
 
-#define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
+#define INPUT_IMAGE_FILENAME "Input/bunnycity1.bmp"
 
 #define SIMPLE_CONVOLUTION_KERNEL "SimpleConvolution"
 #define ONE_PASS_CONVOLUTION_KERNEL "OnePassConvolution"
