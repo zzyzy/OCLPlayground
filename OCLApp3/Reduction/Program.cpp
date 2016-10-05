@@ -6,7 +6,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define INPUT_IMAGE_FILENAME "Input/bunnycity1.bmp"
+#define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
 #define OUTPUT_IMAGE_FILENAME "Output/bunnycity1.bmp"
 
 int main()
