@@ -74,8 +74,8 @@ int main()
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 	cl::Sampler sampler = MakeSampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST);
 
-	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE,
-	                                       imageFormat, w, h, 0);
+	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+	                                       imageFormat, w, h, 0, inputImage);
 	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE,
 	                                       imageFormat, w, h, 0);
 
@@ -101,9 +101,6 @@ int main()
 	cl::Buffer filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 	                                     sizeof(float) * filterSize * filterSize, filter);
 
-	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-	CheckErrorCode(err, "Unable to write image buffer A");
-
 	err = kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
 	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
 	err |= kernels[SIMPLE_CONVOLUTION_KERNEL].setArg(2, sampler);
@@ -127,9 +124,6 @@ int main()
 	filter = const_cast<float*>(filters[filterSize]);
 	filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 	                          sizeof(float) * filterSize, filter);
-
-	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-	CheckErrorCode(err, "Unable to write image buffer A");
 
 	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
@@ -160,6 +154,9 @@ int main()
 
 	stbi_write_bmp("Output/twoPassBlurredImage.bmp", w, h, 4, outputImage);
 
+	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+	CheckErrorCode(err, "Unable to write image buffer A");
+
 	// ==============================================================
 	//
 	// Perform profiling
@@ -168,9 +165,6 @@ int main()
 	cl::Event startEvent, finishEvent;
 	int filterSizes[3] = {3, 5, 7};
 	std::ofstream outfile;
-
-	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-	CheckErrorCode(err, "Unable to write image buffer A");
 
 	for (auto i = 0; i < 3; ++i)
 	{
@@ -218,9 +212,6 @@ int main()
 			filterBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			                          sizeof(float) * filterSizes[i], filter);
 
-			err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-			CheckErrorCode(err, "Unable to write image buffer A");
-
 			err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
 			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
 			err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(3, filterBuffer);
@@ -247,6 +238,9 @@ int main()
 			auto end = finishEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>();
 			totalTime += end - start;
 			outfile << (end - start) / 1000000.0f << std::endl;
+
+			err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
+			CheckErrorCode(err, "Unable to write image buffer A");
 		}
 
 		std::cout << "Average time for " << name << ": " << totalTime / 1000000.0f / 1000.0f << std::endl;

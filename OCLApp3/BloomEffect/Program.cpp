@@ -70,6 +70,7 @@ int main()
 		std::cin >> filename;
 		infile.open(filename);
 	}
+	infile.close();
 
 	std::cout << "Use custom settings? (y/n)" << std::endl;
 	std::cin >> input;
@@ -117,15 +118,12 @@ int main()
 	cl::ImageFormat imageFormat(CL_RGBA, CL_UNORM_INT8);
 	cl::Sampler sampler = MakeSampler(context, CL_FALSE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST);
 
-	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE,
-	                                       imageFormat, w, h, 0);
+	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+	                                       imageFormat, w, h, 0, inputImage);
 	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE,
 	                                       imageFormat, w, h, 0);
 	cl::Image2D imageBufferC = MakeImage2D(context, CL_MEM_READ_WRITE,
 	                                       imageFormat, w, h, 0);
-
-	err = queue.enqueueWriteImage(imageBufferA, CL_TRUE, origin, region, 0, 0, inputImage);
-	CheckErrorCode(err, "Unable to write image buffer A");
 
 	// ==============================================================
 	//
@@ -147,10 +145,8 @@ int main()
 	// ==============================================================
 	if (luminanceAverage == 0.0f)
 	{
-		float* luminanceValues = new float[w * h];
 		float luminanceSum;
-		cl::Buffer luminanceBuffer = MakeBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-		                                        sizeof(float) * w * h, luminanceValues);
+		cl::Buffer luminanceBuffer = MakeBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * w * h);
 		cl::Buffer sumBuffer = MakeBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float));
 		size_t localSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 		size_t globalSize = (w * h) / 4;
@@ -192,8 +188,6 @@ int main()
 		CheckErrorCode(err, "Unable to read sum");
 
 		luminanceAverage = luminanceSum / (w * h);
-
-		delete[] luminanceValues;
 	}
 
 	std::cout << "Using threshold value: " << luminanceAverage << std::endl;
