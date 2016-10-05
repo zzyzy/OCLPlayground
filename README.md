@@ -21,6 +21,7 @@ Open and build the respective project solutions with Visual Studio 2012 and abov
     * How to create kernels
 2. OCLApp2 - Introduction to parallel programming
     * How to effectively enqueue kernels with the right work group size and number of work groups
+    * How to 'convert' a serial code to parallel code
 3. OCLApp3 - Image processing
     * How to perform image convolution (gaussian filter)
     * How to perform parallel reduction
