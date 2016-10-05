@@ -57,11 +57,10 @@ int main()
 	// Create buffers for luminance data
 	//
 	// ==============================================================
-	float* luminance = new float[w * h];
 	float sum = 0.0f;
 	size_t localSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 	size_t globalSize = (w * h) / 4;
-	cl::Buffer luminanceBuffer = MakeBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(float) * w * h, luminance);
+	cl::Buffer luminanceBuffer = MakeBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * w * h);
 	cl::Buffer sumBuffer = MakeBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float));
 
 	// ==============================================================
@@ -77,8 +76,6 @@ int main()
 	err = queue.enqueueNDRangeKernel(kernels[LUMINANCE_KERNEL], cl::NullRange, cl::NDRange(w, h));
 	CheckErrorCode(err, "Unablet to enqueue luminance kernel");
 
-	err = queue.enqueueReadBuffer(luminanceBuffer, CL_TRUE, 0, sizeof(float) * w * h, luminance);
-	CheckErrorCode(err, "Unablet to read luminance kernel result");
 	stbi_image_free(inputImage);
 
 	// ==============================================================
@@ -116,8 +113,6 @@ int main()
 
 	std::cout << "Sum: " << sum << std::endl;
 	std::cout << "Avg: " << sum / (w * h) << std::endl;
-
-	delete[] luminance;
 
 	return 0;
 }
