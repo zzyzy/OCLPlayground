@@ -20,6 +20,7 @@ Open and build the solution with Visual Studio 2012 and above.
 
 ## TODOs
 1. Bloom image doesn't look like it is glowing at all
+2. Avoid branching statements in kernel functions
 
 ## References
 1. https://www.evl.uic.edu/kreda/gpu/image-convolution/
