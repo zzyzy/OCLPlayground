@@ -16,12 +16,12 @@
 #define CONVOLUTION_CL_FILENAME "Convolution.cl"
 #define BLOOM_CL_FILENAME "Bloom.cl"
 
-#define LUMINANCE_KERNEL "luminance"
-#define REDUCTION_STEP_KERNEL "reductionStep"
-#define REDUCTION_COMPLETE_KERNEL "reductionComplete"
-#define ONE_PASS_CONVOLUTION_KERNEL "onePassConvolution"
-#define DISCARD_PIXELS_KERNEL "discardPixels"
-#define MERGE_IMAGES_KERNEL "mergeImages"
+#define LUMINANCE_KERNEL "Luminance"
+#define REDUCTION_STEP_KERNEL "ReductionStep"
+#define REDUCTION_COMPLETE_KERNEL "ReductionComplete"
+#define ONE_PASS_CONVOLUTION_KERNEL "OnePassConvolution"
+#define DISCARD_PIXELS_KERNEL "DiscardPixels"
+#define MERGE_IMAGES_KERNEL "MergeImages"
 
 #define VENDOR_INTEL "Intel"
 #define VENDOR_AMD "Advanced Micro Devices"

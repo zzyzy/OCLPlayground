@@ -1,5 +1,5 @@
 __kernel
-void discardPixels(__read_only image2d_t inputImage,
+void DiscardPixels(__read_only image2d_t inputImage,
                    __write_only image2d_t outputImage,
 				   sampler_t sampler,
                    __private float luminanceAverage)
@@ -17,7 +17,7 @@ void discardPixels(__read_only image2d_t inputImage,
 }
 
 __kernel
-void mergeImages(__read_only image2d_t inputImageA,
+void MergeImages(__read_only image2d_t inputImageA,
                  __read_only image2d_t inputImageB,
                  __write_only image2d_t outputImage,
 				 sampler_t sampler)

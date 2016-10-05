@@ -1,5 +1,5 @@
 __kernel
-void luminance(__read_only image2d_t inputImage,
+void Luminance(__read_only image2d_t inputImage,
 			   sampler_t sampler,
                __global float* outputLuminance)
 {
@@ -10,7 +10,7 @@ void luminance(__read_only image2d_t inputImage,
 }
 
 __kernel
-void reductionStep(__global float4* data,
+void ReductionStep(__global float4* data,
                    __local float4* partialSums)
 {
 	int lid = get_local_id(0);
@@ -35,7 +35,7 @@ void reductionStep(__global float4* data,
 }
 
 __kernel
-void reductionComplete(__global float4* data,
+void ReductionComplete(__global float4* data,
                        __local float4* partialSums,
                        __global float* sum)
 {

@@ -1,5 +1,5 @@
 __kernel
-void simpleConvolution(__read_only image2d_t inputImage,
+void SimpleConvolution(__read_only image2d_t inputImage,
 					   __write_only image2d_t outputImage,
 					   sampler_t sampler,
 					   __constant float* filter,
@@ -45,7 +45,7 @@ void simpleConvolution(__read_only image2d_t inputImage,
 }
 
 __kernel
-void onePassConvolution(__read_only image2d_t inputImage,
+void OnePassConvolution(__read_only image2d_t inputImage,
 						__write_only image2d_t outputImage,
 						sampler_t sampler,
 						__constant float* filter,

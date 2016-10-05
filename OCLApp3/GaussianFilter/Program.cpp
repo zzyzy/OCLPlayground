@@ -16,8 +16,8 @@
 
 #define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
 
-#define SIMPLE_CONVOLUTION_KERNEL "simpleConvolution"
-#define ONE_PASS_CONVOLUTION_KERNEL "onePassConvolution"
+#define SIMPLE_CONVOLUTION_KERNEL "SimpleConvolution"
+#define ONE_PASS_CONVOLUTION_KERNEL "OnePassConvolution"
 
 #define VENDOR_INTEL "Intel"
 #define VENDOR_AMD "Advanced Micro Devices"

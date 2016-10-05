@@ -13,9 +13,9 @@
 
 #define INPUT_IMAGE_FILENAME "bunnycity1.bmp"
 
-#define LUMINANCE_KERNEL "luminance"
-#define REDUCTION_STEP_KERNEL "reductionStep"
-#define REDUCTION_COMPLETE_KERNEL "reductionComplete"
+#define LUMINANCE_KERNEL "Luminance"
+#define REDUCTION_STEP_KERNEL "ReductionStep"
+#define REDUCTION_COMPLETE_KERNEL "ReductionComplete"
 
 #define VENDOR_INTEL "Intel"
 #define VENDOR_AMD "Advanced Micro Devices"
