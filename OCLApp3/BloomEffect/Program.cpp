@@ -212,7 +212,7 @@ int main()
 	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read discarded pixels output image");
 
-	stbi_write_bmp("Output/discardedPixelsImage.bmp", w, h, 4, outputImage);
+	stbi_write_bmp("Output/DiscardedPixelsImage.bmp", w, h, 4, outputImage);
 
 	// ==============================================================
 	//
@@ -233,7 +233,7 @@ int main()
 	err = queue.enqueueReadImage(imageBufferA, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read discarded pixels output image");
 
-	stbi_write_bmp("Output/onePassBlurredImage.bmp", w, h, 4, outputImage);
+	stbi_write_bmp("Output/OnePassBlurredImage.bmp", w, h, 4, outputImage);
 
 	err = kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(0, imageBufferA);
 	err |= kernels[ONE_PASS_CONVOLUTION_KERNEL].setArg(1, imageBufferB);
@@ -246,7 +246,7 @@ int main()
 	err = queue.enqueueReadImage(imageBufferB, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
-	stbi_write_bmp("Output/twoPassBlurredImage.bmp", w, h, 4, outputImage);
+	stbi_write_bmp("Output/TwoPassBlurredImage.bmp", w, h, 4, outputImage);
 
 	// ==============================================================
 	//
@@ -268,7 +268,7 @@ int main()
 	err = queue.enqueueReadImage(imageBufferC, CL_TRUE, origin, region, 0, 0, outputImage);
 	CheckErrorCode(err, "Unable to read output image buffer");
 
-	stbi_write_bmp("Output/bloomImage.bmp", w, h, 4, outputImage);
+	stbi_write_bmp("Output/BloomImage.bmp", w, h, 4, outputImage);
 
 	delete[] outputImage;
 	stbi_image_free(inputImage);
