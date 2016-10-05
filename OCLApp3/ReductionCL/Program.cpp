@@ -20,7 +20,7 @@
 #define VENDOR_INTEL "Intel"
 #define VENDOR_AMD "Advanced Micro Devices"
 #define VENDOR_NVIDIA "NVIDIA"
-#define SELECTED_VENDOR VENDOR_NVIDIA
+#define SELECTED_VENDOR VENDOR_INTEL
 
 int main()
 {

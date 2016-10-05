@@ -22,7 +22,7 @@
 #define VENDOR_INTEL "Intel"
 #define VENDOR_AMD "Advanced Micro Devices"
 #define VENDOR_NVIDIA "NVIDIA"
-#define SELECTED_VENDOR VENDOR_NVIDIA
+#define SELECTED_VENDOR VENDOR_INTEL
 
 int main()
 {
@@ -76,8 +76,11 @@ int main()
 
 	cl::Image2D imageBufferA = MakeImage2D(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 	                                       imageFormat, w, h, 0, inputImage);
-	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE,
-	                                       imageFormat, w, h, 0);
+
+	//TODO: For some reason Intel doesn't allow not using host ptr, but NVIDIA does
+	//		Maybe something wrong with C++ interface
+	cl::Image2D imageBufferB = MakeImage2D(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+	                                       imageFormat, w, h, 0, inputImage);
 
 	// ==============================================================
 	//

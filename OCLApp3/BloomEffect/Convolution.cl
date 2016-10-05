@@ -1,16 +1,16 @@
 __kernel
 void simpleConvolution(__read_only image2d_t inputImage,
-	__write_only image2d_t outputImage,
-	__read_only sampler_t sampler,
-	__constant float* filter,
-	__private int filterSize)
+					   __write_only image2d_t outputImage,
+					   sampler_t sampler,
+					   __constant float* filter,
+					   __private int filterSize)
 {
 	// Get work-item’s row and column position
 	int column = get_global_id(0);
 	int row = get_global_id(1);
 
 	// Accumulated pixel value
-	float4 sum = (float4)(0.0);
+	float4 sum = (float4)(0.0f);
 
 	// Filter's current index
 	int filterIndex = 0;
@@ -46,18 +46,18 @@ void simpleConvolution(__read_only image2d_t inputImage,
 
 __kernel
 void onePassConvolution(__read_only image2d_t inputImage,
-	__write_only image2d_t outputImage,
-	__read_only sampler_t sampler,
-	__constant float* filter,
-	__private int filterSize,
-	__private int horizontalPass)
+					    __write_only image2d_t outputImage,
+					    sampler_t sampler,
+					    __constant float* filter,
+					    __private int filterSize,
+					    __private int horizontalPass)
 {
 	// Get work-item’s row and column position
 	int column = get_global_id(0);
 	int row = get_global_id(1);
 
 	// Accumulated pixel value
-	float4 sum = (float4)(0.0);
+	float4 sum = (float4)(0.0f);
 
 	// Filter's current index
 	int filterIndex = 0;
