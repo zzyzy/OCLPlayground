@@ -17,6 +17,7 @@ Open and build the solution with Visual Studio 2012 and above.
 3. Simple gaussian filter convolution
 4. Two pass gaussian filter convolution
 5. Transform color image to bloom image (make it glow)
+6. Tested on Intel and NVIDIA platforms (Intel HD Graphics 4000 & NVIDIA Geforce GT730M)
 
 ## TODOs
 1. Bloom image doesn't look like it is glowing at all
