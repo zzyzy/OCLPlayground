@@ -26,3 +26,7 @@ Open and build the respective project solutions with Visual Studio 2012 and abov
     * How to perform image convolution (gaussian filter)
     * How to perform parallel reduction
     * How to apply bloom effect to an image
+4. OCLApp4 - Pattern matching and prime numbers
+    * KMP algorithm
+    * Segmented sieve of eratosthenes
+    * Pollard's rho algorithm
