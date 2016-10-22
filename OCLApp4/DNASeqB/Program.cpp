@@ -1,6 +1,8 @@
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <unordered_map>
+#include <limits>
 
 #include <CL/cl.hpp>
 
@@ -8,6 +10,7 @@
 
 #define CL_FILENAME "PatternMatching.cl"
 #define INPUT_FILENAME "DNA_sequence.txt"
+#define EOF_SYMBOL "//"
 
 #define PRIME_NUMBERS_KERNEL "PatternMatching"
 
@@ -15,6 +18,8 @@
 #define VENDOR_AMD "Advanced Micro Devices"
 #define VENDOR_NVIDIA "NVIDIA"
 #define SELECTED_VENDOR VENDOR_INTEL
+
+char* ReadDNASeq(char* filename, size_t& size, size_t& rowSize, size_t& numberOfRows);
 
 int main()
 {
@@ -40,20 +45,18 @@ int main()
      * Read text file
      *
      */
-    char* data = nullptr;
     size_t size = 0;
-    std::ifstream infile;
-    infile.open(INPUT_FILENAME);
-    if (infile.is_open() && infile.good())
-    {
-        infile.seekg(0, infile.end);
-        size = infile.tellg();
-        infile.seekg(0, infile.beg);
-        data = new char[size];
+    size_t rowSize = 0;
+    size_t numberOfRows = 0;
+    char* data = ReadDNASeq(INPUT_FILENAME, size, rowSize, numberOfRows);
+    char* output = new char[rowSize * numberOfRows + 1];
+#ifdef WIN32
+    strcpy_s(output, rowSize * numberOfRows + 1, "");
+#else
+    strcpy(output, "");
+#endif
 
-        infile.read(data, size);
-    }
-    infile.close();
+    std::cout << "DNA Sequence Input:" << std::endl << data << std::endl;
 
     /*
      *
@@ -71,7 +74,48 @@ int main()
      * 
      */
     auto textBuffer = MakeBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size, data);
-    auto resultBuffer = MakeBuffer(context, CL_MEM_WRITE_ONLY, size, nullptr);
+    auto resultBuffer = MakeBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, rowSize * numberOfRows + 1, output);
 
     return 0;
+}
+
+char* ReadDNASeq(char* filename, size_t& size, size_t& rowSize, size_t& numberOfRows)
+{
+    char* data = nullptr;
+
+    std::string buffer;
+    std::ifstream infile;
+    std::stringstream stream;
+
+    size = 0;
+    rowSize = 0;
+    numberOfRows = 0;
+
+    infile.open(filename);
+    if (infile.is_open() && infile.good())
+    {
+        while (getline(infile, buffer))
+        {
+            if (buffer != EOF_SYMBOL)
+            {
+                stream << buffer;
+                ++numberOfRows;
+            }
+        }
+
+        buffer = stream.str();
+        size = buffer.length() + 1;
+        data = new char[size];
+        std::copy(buffer.begin(), buffer.end(), data);
+        data[size - 1] = '\0';
+
+        while (!isdigit(stream.peek()))
+        {
+            stream.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
+        }
+        stream >> rowSize;
+    }
+    infile.close();
+
+    return data;
 }

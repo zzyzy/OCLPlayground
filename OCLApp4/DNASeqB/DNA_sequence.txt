@@ -51,7 +51,7 @@
      acctgtatcg ttttccattc atctcccccc ctccactgtg gtatatcatt ttgtcattag      3060
      aaagtattat tttgattttc attggcagta gaagacaaca ggatacagaa gaggttttca      3120
      acttgaaagt ggataaaatc gactgatacc aaaacaacat tgttttacag aagtggtcgt      3180
-     ttgaggacat caacatattt cacaatgcct gctatgaatt taaaatacaa atttggcctg      3240      
+     ttgaggacat caacatattt cacaatgcct gctatgaatt taaaatacaa atttggcctg      3240
      gtcaactcgg ccggcagata cctcactgct gagaagtttg gtggcaaagt caatgcctca      3300
      ggagcaacgt taaaagccag gcaagtatgg atcctagagc aagaagagag cagcacgatc      3360
      agctacttga aggcgccctc tggtaacttc ctctctgcag ataaaaacgg taacgtctat      3420
