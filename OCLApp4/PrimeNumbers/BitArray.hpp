@@ -35,6 +35,7 @@ public:
 
 private:
     size_t* data;
+    size_t dataSize;
 };
 
 #endif // __BIT_ARRAY_HPP__

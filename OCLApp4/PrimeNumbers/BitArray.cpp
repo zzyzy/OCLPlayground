@@ -8,7 +8,9 @@
 BitArray::BitArray(const size_t& numberOfBits)
 {
     // sizeof size_t = 4 bytes = 32 bits
-    data = new size_t[numberOfBits / (8 * sizeof size_t)];
+    dataSize = numberOfBits / (8 * sizeof size_t) + 1;
+    data = new size_t[dataSize];
+    memset(data, 0, dataSize * sizeof size_t);
 }
 
 BitArray::~BitArray()
